@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}行事曆 - 自律打卡{% endblock %}
+
+{% block content %}
+<div class="calendar-header">
+    <a href="/calendar?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-nav">◀</a>
+    <h1>📅 {{ year }}年 {{ month_name }}</h1>
+    <a href="/calendar?year={{ next_year }}&month={{ next_month }}" class="btn btn-nav">▶</a>
+</div>
+
+<div class="calendar-grid">
+    <div class="calendar-weekdays">
+        <div class="weekday">日</div>
+        <div class="weekday">一</div>
+        <div class="weekday">二</div>
+        <div class="weekday">三</div>
+        <div class="weekday">四</div>
+        <div class="weekday">五</div>
+        <div class="weekday">六</div>
+    </div>
+    
+    {% for week in calendar_data %}
+    <div class="calendar-week">
+        {% for day_data in week %}
+        {% if day_data %}
+        <div class="calendar-day {% if day_data.is_today %}today{% endif %} {% if day_data.is_future %}future{% endif %}" 
+             onclick="window.location.href='/history?target_date={{ day_data.date.isoformat() }}'">
+            <div class="day-number">{{ day_data.day }}</div>
+            {% if day_data.completion_count > 0 %}
+            <div class="completion-indicator">
+                <div class="completion-bar" style="width: {{ (day_data.completion_rate * 100)|round }}%"></div>
+                <span class="completion-count">{{ day_data.completion_count }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="calendar-day empty"></div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+<div class="calendar-legend">
+    <div class="legend-item">
+        <div class="legend-color today-color"></div>
+        <span>今天</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color completed-color"></div>
+        <span>有完成任務</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color future-color"></div>
+        <span>未來日期</span>
+    </div>
+</div>
+{% endblock %}

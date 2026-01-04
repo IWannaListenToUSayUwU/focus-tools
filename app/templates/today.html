@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}今日任務 - 自律打卡{% endblock %}
+
+{% block content %}
+<h1>📅 {{ today.strftime('%Y-%m-%d') }} 今日任務</h1>
+
+{% if daily_tasks %}
+<h2>🔄 每日任務</h2>
+<ul class="task-list">
+    {% for task in daily_tasks %}
+    <li class="task-item {% if task.completed %}completed{% endif %}">
+        <div class="task-info">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="streak">🔥 {{ task.streak }} 天</span>
+        </div>
+        {% if not task.completed %}
+        <form action="/tasks/{{ task.id }}/complete" method="post" class="complete-form">
+            <button type="submit" class="btn btn-complete">✓ 完成</button>
+        </form>
+        {% else %}
+        <span class="done-badge">✅ 已完成</span>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if one_time_tasks %}
+<h2>📝 臨時代辦</h2>
+<ul class="task-list">
+    {% for task in one_time_tasks %}
+    <li class="task-item {% if task.completed %}completed{% endif %}">
+        <div class="task-info">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="due-date">📅 {{ task.due_date.strftime('%m-%d') }}</span>
+        </div>
+        {% if not task.completed %}
+        <form action="/tasks/{{ task.id }}/complete" method="post" class="complete-form">
+            <button type="submit" class="btn btn-complete">✓ 完成</button>
+        </form>
+        {% else %}
+        <span class="done-badge">✅ 已完成</span>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if not daily_tasks and not one_time_tasks %}
+<p class="empty-state">目前沒有任務，<a href="/tasks">去新增一個</a>！</p>
+{% endif %}
+{% endblock %}

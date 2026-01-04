@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}自律打卡{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/today" class="nav-brand">🎯 自律打卡</a>
+            <div class="nav-links">
+                <a href="/today">今日</a>
+                <a href="/tasks">任務管理</a>
+                <a href="/calendar">行事曆</a>
+                <a href="/history">歷史</a>
+            </div>
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}任務管理 - 自律打卡{% endblock %}
+
+{% block content %}
+<h1>📝 任務管理</h1>
+
+<form action="/tasks/add" method="post" class="add-task-form">
+    <input type="text" name="name" placeholder="輸入任務名稱..." required maxlength="200">
+    <div class="task-type-selector">
+        <label>
+            <input type="radio" name="task_type" value="daily" checked>
+            🔄 每日任務
+        </label>
+        <label>
+            <input type="radio" name="task_type" value="one_time">
+            📝 一次性任務
+        </label>
+    </div>
+    <div class="due-date-input" style="display: none;">
+        <input type="date" name="due_date" placeholder="到期日">
+    </div>
+    <button type="submit" class="btn btn-add">+ 新增任務</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.querySelectorAll('input[name="task_type"]');
+    const dueDateDiv = document.querySelector('.due-date-input');
+    
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'one_time') {
+                dueDateDiv.style.display = 'block';
+            } else {
+                dueDateDiv.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+
+{% if tasks %}
+<ul class="task-list manage-list">
+    {% for task in tasks %}
+    <li class="task-item {% if not task.is_active %}inactive{% endif %}">
+        <div class="task-info">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="task-meta">
+                {% if task.task_type.value == "daily" %}🔄 每日任務{% else %}📝 一次性 ({{ task.due_date.strftime('%m-%d') if task.due_date else '無期限' }}){% endif %}
+            </span>
+        </div>
+        <div class="task-actions">
+            <form action="/tasks/{{ task.id }}/toggle-active" method="post">
+                <button type="submit" class="btn btn-toggle">
+                    {% if task.is_active %}⏸ 停用{% else %}▶ 啟用{% endif %}
+                </button>
+            </form>
+            <form action="/tasks/{{ task.id }}/delete" method="post" onsubmit="return confirm('確定要刪除這個任務嗎？')">
+                <button type="submit" class="btn btn-delete">🗑 刪除</button>
+            </form>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-state">還沒有任何任務。</p>
+{% endif %}
+{% endblock %}

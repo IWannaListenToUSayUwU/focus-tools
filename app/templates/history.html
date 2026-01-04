@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}歷史紀錄 - 自律打卡{% endblock %}
+
+{% block content %}
+<h1>📜 歷史紀錄</h1>
+
+<form action="/history" method="get" class="date-picker-form">
+    <input type="date" name="target_date" value="{{ date.isoformat() }}">
+    <button type="submit" class="btn">查詢</button>
+</form>
+
+<h2>{{ date.strftime('%Y-%m-%d') }} 完成的任務</h2>
+
+{% if completed_tasks %}
+<ul class="task-list history-list">
+    {% for item in completed_tasks %}
+    <li class="task-item completed">
+        <span class="task-name">{{ item.name }}</span>
+        <span class="time">{{ item.completed_at.strftime('%H:%M') }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty-state">這天沒有完成任何任務。</p>
+{% endif %}
+{% endblock %}
