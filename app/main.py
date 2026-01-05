@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from app.db import engine, Base
 from app.routes import pages
-from app.services.discord import start_periodic_messages
+from app.services.discord import start_task_reminder_service
 
 # 載入環境變數
 load_dotenv()
@@ -20,25 +20,25 @@ Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 啟動時執行
-    print("🚀 啟動 Discord 定期訊息服務...")
-    discord_task = None
+    print("🚀 啟動任務提醒服務...")
+    reminder_task = None
     
     # 檢查是否有設定 Discord webhook
     if os.getenv("DISCORD_WEBHOOK_URL"):
-        discord_task = asyncio.create_task(start_periodic_messages())
-        print("✅ Discord 定期訊息服務已啟動 (每 10 秒發送一次)")
+        reminder_task = asyncio.create_task(start_task_reminder_service())
+        print("✅ 任務提醒服務已啟動 (每分鐘檢查一次)")
     else:
-        print("⚠️  未設定 DISCORD_WEBHOOK_URL，跳過 Discord 服務")
+        print("⚠️  未設定 DISCORD_WEBHOOK_URL，跳過提醒服務")
     
     yield
     
     # 關閉時執行
-    if discord_task:
-        discord_task.cancel()
+    if reminder_task:
+        reminder_task.cancel()
         try:
-            await discord_task
+            await reminder_task
         except asyncio.CancelledError:
-            print("🛑 Discord 定期訊息服務已停止")
+            print("🛑 任務提醒服務已停止")
 
 app = FastAPI(title="Discipline - 自律打卡", lifespan=lifespan)
 

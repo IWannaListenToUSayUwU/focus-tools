@@ -5,14 +5,49 @@
 {% block content %}
 <h1>📅 {{ today.strftime('%Y-%m-%d') }} 今日任務</h1>
 
-{% if daily_tasks %}
-<h2>🔄 每日任務</h2>
+{% if timed_tasks %}
+<h2>⏰ 時間安排</h2>
+<ul class="task-list timeline-list">
+    {% for task in timed_tasks %}
+    <li class="task-item {% if task.completed %}completed{% endif %} {% if task.is_overdue %}overdue{% endif %}">
+        <div class="task-time-badge">
+            {% if task.time_type == "timed" %}
+                <span class="time-display">{{ task.scheduled_time }}</span>
+            {% elif task.time_type == "duration" %}
+                <span class="time-display">{{ task.time_range_start }}～{{ task.time_range_end }}</span>
+            {% endif %}
+        </div>
+        <div class="task-info">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="task-meta">
+                {% if task.task_type == "daily" %}🔄 每日{% else %}📝 一次性{% endif %}
+                {% if task.estimated_minutes %}· ⏱️ {{ task.estimated_minutes }}分鐘{% endif %}
+                {% if task.streak %}· 🔥 {{ task.streak }} 天{% endif %}
+            </span>
+        </div>
+        {% if not task.completed %}
+        <form action="/tasks/{{ task.id }}/complete" method="post" class="complete-form">
+            <button type="submit" class="btn btn-complete">✓ 完成</button>
+        </form>
+        {% else %}
+        <span class="done-badge">✅ 已完成</span>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if flexible_tasks %}
+<h2>🔄 習慣打卡</h2>
 <ul class="task-list">
-    {% for task in daily_tasks %}
+    {% for task in flexible_tasks %}
     <li class="task-item {% if task.completed %}completed{% endif %}">
         <div class="task-info">
             <span class="task-name">{{ task.name }}</span>
             <span class="streak">🔥 {{ task.streak }} 天</span>
+            {% if task.estimated_minutes %}
+            <span class="task-meta">⏱️ {{ task.estimated_minutes }}分鐘</span>
+            {% endif %}
         </div>
         {% if not task.completed %}
         <form action="/tasks/{{ task.id }}/complete" method="post" class="complete-form">
@@ -33,7 +68,10 @@
     <li class="task-item {% if task.completed %}completed{% endif %}">
         <div class="task-info">
             <span class="task-name">{{ task.name }}</span>
-            <span class="due-date">📅 {{ task.due_date.strftime('%m-%d') }}</span>
+            <span class="due-date">📅 {{ task.due_date.strftime('%m-%d') if task.due_date else '無期限' }}</span>
+            {% if task.scheduled_time %}
+            <span class="task-meta">⏰ {{ task.scheduled_time }}</span>
+            {% endif %}
         </div>
         {% if not task.completed %}
         <form action="/tasks/{{ task.id }}/complete" method="post" class="complete-form">
@@ -47,7 +85,7 @@
 </ul>
 {% endif %}
 
-{% if not daily_tasks and not one_time_tasks %}
+{% if not timed_tasks and not flexible_tasks and not one_time_tasks %}
 <p class="empty-state">目前沒有任務，<a href="/tasks">去新增一個</a>！</p>
 {% endif %}
 {% endblock %}

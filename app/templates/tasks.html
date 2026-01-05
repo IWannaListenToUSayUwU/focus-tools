@@ -7,6 +7,7 @@
 
 <form action="/tasks/add" method="post" class="add-task-form">
     <input type="text" name="name" placeholder="輸入任務名稱..." required maxlength="200">
+    
     <div class="task-type-selector">
         <label>
             <input type="radio" name="task_type" value="daily" checked>
@@ -17,24 +18,71 @@
             📝 一次性任務
         </label>
     </div>
+    
     <div class="due-date-input" style="display: none;">
-        <input type="date" name="due_date" placeholder="到期日">
+        <label class="input-label">到期日</label>
+        <input type="date" name="due_date">
     </div>
+    
+    <div class="time-type-selector">
+        <label class="input-label">時間設定</label>
+        <div class="time-type-options">
+            <label>
+                <input type="radio" name="time_type" value="flexible" checked>
+                🔄 彈性時間
+            </label>
+            <label>
+                <input type="radio" name="time_type" value="timed">
+                ⏰ 定時任務
+            </label>
+            <label>
+                <input type="radio" name="time_type" value="duration">
+                📅 時段任務
+            </label>
+        </div>
+    </div>
+    
+    <div class="time-input-timed" style="display: none;">
+        <label class="input-label">指定時間</label>
+        <input type="time" name="scheduled_time">
+    </div>
+    
+    <div class="time-input-duration" style="display: none;">
+        <label class="input-label">時間範圍</label>
+        <div class="time-range-inputs">
+            <input type="time" name="time_range_start" placeholder="開始">
+            <span class="time-separator">～</span>
+            <input type="time" name="time_range_end" placeholder="結束">
+        </div>
+    </div>
+    
+    <div class="estimated-time-input">
+        <label class="input-label">預估時間（分鐘，選填）</label>
+        <input type="number" name="estimated_minutes" min="1" max="480" placeholder="例如：30">
+    </div>
+    
     <button type="submit" class="btn btn-add">+ 新增任務</button>
 </form>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const radios = document.querySelectorAll('input[name="task_type"]');
+    const taskTypeRadios = document.querySelectorAll('input[name="task_type"]');
     const dueDateDiv = document.querySelector('.due-date-input');
     
-    radios.forEach(radio => {
+    taskTypeRadios.forEach(radio => {
         radio.addEventListener('change', function() {
-            if (this.value === 'one_time') {
-                dueDateDiv.style.display = 'block';
-            } else {
-                dueDateDiv.style.display = 'none';
-            }
+            dueDateDiv.style.display = this.value === 'one_time' ? 'block' : 'none';
+        });
+    });
+    
+    const timeTypeRadios = document.querySelectorAll('input[name="time_type"]');
+    const timedDiv = document.querySelector('.time-input-timed');
+    const durationDiv = document.querySelector('.time-input-duration');
+    
+    timeTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            timedDiv.style.display = this.value === 'timed' ? 'block' : 'none';
+            durationDiv.style.display = this.value === 'duration' ? 'block' : 'none';
         });
     });
 });
@@ -48,6 +96,14 @@ document.addEventListener('DOMContentLoaded', function() {
             <span class="task-name">{{ task.name }}</span>
             <span class="task-meta">
                 {% if task.task_type.value == "daily" %}🔄 每日任務{% else %}📝 一次性 ({{ task.due_date.strftime('%m-%d') if task.due_date else '無期限' }}){% endif %}
+                {% if task.time_type.value == "timed" and task.scheduled_time %}
+                    · ⏰ {{ task.scheduled_time.strftime('%H:%M') }}
+                {% elif task.time_type.value == "duration" and task.time_range_start and task.time_range_end %}
+                    · 📅 {{ task.time_range_start.strftime('%H:%M') }}～{{ task.time_range_end.strftime('%H:%M') }}
+                {% endif %}
+                {% if task.estimated_minutes %}
+                    · ⏱️ {{ task.estimated_minutes }}分鐘
+                {% endif %}
             </span>
         </div>
         <div class="task-actions">

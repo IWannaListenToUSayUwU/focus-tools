@@ -1,12 +1,13 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta, datetime
 import calendar
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
+from typing import Optional
 
 from app.db import get_db
-from app.models import Task, Completion, TaskType
+from app.models import Task, Completion, TaskType, TimeType
 from app.services.streak import calculate_streak
 
 router = APIRouter()
@@ -20,6 +21,7 @@ async def index(request: Request):
 @router.get("/today", response_class=HTMLResponse)
 async def today_page(request: Request, db: Session = Depends(get_db)):
     today = date.today()
+    now = datetime.now().time()
     
     # 每日任務：啟用的每日任務
     # 一次性任務：啟用且到期日是今天或之前的
@@ -35,28 +37,67 @@ async def today_page(request: Request, db: Session = Depends(get_db)):
     completed_stmt = select(Completion.task_id).where(Completion.date == today)
     completed_task_ids = set(db.execute(completed_stmt).scalars().all())
     
-    daily_tasks = []
-    one_time_tasks = []
+    timed_tasks = []      # 有時間設定的任務（定時或時段）
+    flexible_tasks = []   # 彈性習慣任務
+    one_time_tasks = []   # 一次性任務（無時間設定）
     
     for task in tasks:
+        is_completed = task.id in completed_task_ids
+        streak = calculate_streak(db, task.id, today) if task.task_type == TaskType.DAILY else 0
+        
+        # 判斷是否逾時
+        is_overdue = False
+        if not is_completed:
+            if task.time_type == TimeType.TIMED and task.scheduled_time:
+                is_overdue = now > task.scheduled_time
+            elif task.time_type == TimeType.DURATION and task.time_range_end:
+                is_overdue = now > task.time_range_end
+        
         task_info = {
             "id": task.id,
             "name": task.name,
-            "completed": task.id in completed_task_ids,
+            "completed": is_completed,
             "task_type": task.task_type.value,
+            "time_type": task.time_type.value,
+            "scheduled_time": task.scheduled_time.strftime('%H:%M') if task.scheduled_time else None,
+            "time_range_start": task.time_range_start.strftime('%H:%M') if task.time_range_start else None,
+            "time_range_end": task.time_range_end.strftime('%H:%M') if task.time_range_end else None,
+            "estimated_minutes": task.estimated_minutes,
+            "streak": streak,
+            "is_overdue": is_overdue,
         }
         
-        if task.task_type == TaskType.DAILY:
-            streak = calculate_streak(db, task.id, today)
-            task_info["streak"] = streak
-            daily_tasks.append(task_info)
-        else:
+        # 分類任務
+        if task.task_type == TaskType.ONE_TIME and task.time_type == TimeType.FLEXIBLE:
+            # 一次性且無時間設定 -> 臨時代辦
             task_info["due_date"] = task.due_date
             one_time_tasks.append(task_info)
+        elif task.time_type in (TimeType.TIMED, TimeType.DURATION):
+            # 有時間設定 -> 時間安排區
+            timed_tasks.append(task_info)
+        else:
+            # 彈性習慣 -> 習慣打卡區
+            flexible_tasks.append(task_info)
+    
+    # 時間安排區按時間排序
+    def get_sort_time(t):
+        if t["scheduled_time"]:
+            return t["scheduled_time"]
+        elif t["time_range_start"]:
+            return t["time_range_start"]
+        return "99:99"
+    
+    timed_tasks.sort(key=get_sort_time)
     
     return request.app.state.templates.TemplateResponse(
         "today.html",
-        {"request": request, "daily_tasks": daily_tasks, "one_time_tasks": one_time_tasks, "today": today}
+        {
+            "request": request, 
+            "timed_tasks": timed_tasks,
+            "flexible_tasks": flexible_tasks,
+            "one_time_tasks": one_time_tasks, 
+            "today": today
+        }
     )
 
 
@@ -92,6 +133,11 @@ async def add_task(
     name: str = Form(...), 
     task_type: str = Form("daily"),
     due_date: str = Form(None),
+    time_type: str = Form("flexible"),
+    scheduled_time: str = Form(None),
+    time_range_start: str = Form(None),
+    time_range_end: str = Form(None),
+    estimated_minutes: str = Form(None),
     db: Session = Depends(get_db)
 ):
     task_type_enum = TaskType.DAILY if task_type == "daily" else TaskType.ONE_TIME
@@ -103,10 +149,53 @@ async def add_task(
         except ValueError:
             due_date_obj = date.today()
     
+    # 處理時間類型
+    time_type_map = {
+        "flexible": TimeType.FLEXIBLE,
+        "timed": TimeType.TIMED,
+        "duration": TimeType.DURATION
+    }
+    time_type_enum = time_type_map.get(time_type, TimeType.FLEXIBLE)
+    
+    # 處理時間欄位
+    scheduled_time_obj = None
+    time_range_start_obj = None
+    time_range_end_obj = None
+    estimated_minutes_int = None
+    
+    if time_type_enum == TimeType.TIMED and scheduled_time:
+        try:
+            scheduled_time_obj = time.fromisoformat(scheduled_time)
+        except ValueError:
+            pass
+    
+    if time_type_enum == TimeType.DURATION:
+        if time_range_start:
+            try:
+                time_range_start_obj = time.fromisoformat(time_range_start)
+            except ValueError:
+                pass
+        if time_range_end:
+            try:
+                time_range_end_obj = time.fromisoformat(time_range_end)
+            except ValueError:
+                pass
+    
+    if estimated_minutes:
+        try:
+            estimated_minutes_int = int(estimated_minutes)
+        except ValueError:
+            pass
+    
     task = Task(
         name=name.strip(),
         task_type=task_type_enum,
-        due_date=due_date_obj
+        due_date=due_date_obj,
+        time_type=time_type_enum,
+        scheduled_time=scheduled_time_obj,
+        time_range_start=time_range_start_obj,
+        time_range_end=time_range_end_obj,
+        estimated_minutes=estimated_minutes_int
     )
     db.add(task)
     db.commit()
