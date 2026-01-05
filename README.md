@@ -26,17 +26,11 @@ tmux new -s api
 ```
 
 ### 3) Start the Python service
-Run your API/service inside the `tmux` session. Common examples:
+Run your API/service inside the `tmux` session.
 
 ```bash
-# Example A: plain Python
-python app.py
-
-# Example B: FastAPI (uvicorn)
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
-
-Replace the command above with the actual entrypoint of this project.
 
 Attach to the session (e.g. after reconnecting SSH):
 
