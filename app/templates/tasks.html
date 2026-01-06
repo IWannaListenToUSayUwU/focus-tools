@@ -44,21 +44,21 @@
     
     <div class="time-input-timed" style="display: none;">
         <label class="input-label">指定時間</label>
-        <input type="time" name="scheduled_time">
+        <input type="time" name="scheduled_time" id="scheduled_time">
     </div>
     
     <div class="time-input-duration" style="display: none;">
         <label class="input-label">時間範圍</label>
         <div class="time-range-inputs">
-            <input type="time" name="time_range_start" placeholder="開始">
+            <input type="time" name="time_range_start" id="time_range_start" placeholder="開始">
             <span class="time-separator">～</span>
-            <input type="time" name="time_range_end" placeholder="結束">
+            <input type="time" name="time_range_end" id="time_range_end" placeholder="結束">
         </div>
     </div>
     
     <div class="estimated-time-input">
         <label class="input-label">預估時間（分鐘，選填）</label>
-        <input type="number" name="estimated_minutes" min="1" max="480" placeholder="例如：30">
+        <input type="number" name="estimated_minutes" id="estimated_minutes" min="1" max="480" value="3">
     </div>
     
     <button type="submit" class="btn btn-add">+ 新增任務</button>
@@ -79,10 +79,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const timedDiv = document.querySelector('.time-input-timed');
     const durationDiv = document.querySelector('.time-input-duration');
     
+    // 取得目前時間（HH:MM 格式）
+    function getCurrentTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+    
+    // 取得一小時後的時間
+    function getOneHourLater() {
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+    
     timeTypeRadios.forEach(radio => {
         radio.addEventListener('change', function() {
-            timedDiv.style.display = this.value === 'timed' ? 'block' : 'none';
-            durationDiv.style.display = this.value === 'duration' ? 'block' : 'none';
+            if (this.value === 'timed') {
+                timedDiv.style.display = 'block';
+                // 設定預設時間為目前時間
+                const scheduledTimeInput = document.getElementById('scheduled_time');
+                if (!scheduledTimeInput.value) {
+                    scheduledTimeInput.value = getCurrentTime();
+                }
+            } else {
+                timedDiv.style.display = 'none';
+            }
+            
+            if (this.value === 'duration') {
+                durationDiv.style.display = 'block';
+                // 設定預設時間範圍：現在到一小時後
+                const startInput = document.getElementById('time_range_start');
+                const endInput = document.getElementById('time_range_end');
+                if (!startInput.value) {
+                    startInput.value = getCurrentTime();
+                }
+                if (!endInput.value) {
+                    endInput.value = getOneHourLater();
+                }
+            } else {
+                durationDiv.style.display = 'none';
+            }
         });
     });
 });
