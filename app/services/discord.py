@@ -52,6 +52,21 @@ class DiscordService:
             self.notified_tasks.clear()
             self.last_reset_date = today
             print(f"🔄 已重置每日通知記錄 ({today})")
+    
+    async def send_completion_message(self, task_name: str) -> bool:
+        """發送任務完成的鼓勵訊息"""
+        encouragement_messages = [
+            f"🎉 **太棒了！** 你完成了「{task_name}」！",
+            f"✅ **做得好！** 「{task_name}」已完成，繼續保持！",
+            f"🌟 **厲害！** 你成功完成了「{task_name}」！",
+            f"💪 **讚！** 「{task_name}」完成，你真的很棒！",
+            f"🔥 **太強了！** 「{task_name}」搞定，持續燃燒吧！",
+            f"⭐ **完美！** 「{task_name}」達成，你越來越自律了！"
+        ]
+        
+        import random
+        message = random.choice(encouragement_messages)
+        return await self.send_message(message)
 
 
 # 全域 Discord 服務實例

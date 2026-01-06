@@ -1,3 +1,4 @@
+import os
 from datetime import date, time, timedelta, datetime
 import calendar
 from fastapi import APIRouter, Request, Depends, Form
@@ -110,9 +111,22 @@ async def complete_task(task_id: int, db: Session = Depends(get_db)):
     ).scalar_one_or_none()
     
     if existing is None:
+        # 取得任務資訊
+        task = db.get(Task, task_id)
+        
+        # 新增完成記錄
         completion = Completion(task_id=task_id, date=today)
         db.add(completion)
         db.commit()
+        
+        # 發送完成鼓勵訊息（如果有設定 Discord webhook）
+        if task and os.getenv("DISCORD_WEBHOOK_URL"):
+            try:
+                from app.services.discord import get_discord_service
+                discord_service = get_discord_service()
+                await discord_service.send_completion_message(task.name)
+            except Exception as e:
+                print(f"❌ 發送完成訊息失敗: {e}")
     
     return RedirectResponse(url="/today", status_code=303)
 
